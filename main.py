@@ -44,7 +44,11 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     referred_by = int(context.args[0].replace("ref_", "")) if context.args and context.args[0].startswith("ref_") else None
     text = await get_dashboard_text(user_id, referred_by)
-    await update.message.reply_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+    else:
+        await update.message.reply_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
     return ConversationHandler.END
 
 async def gen_code_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -165,16 +169,18 @@ async def receive_2fa(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def receive_redeem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     res = await use_redeem_code(update.effective_user.id, update.message.text.strip())
+    text = await get_dashboard_text(update.effective_user.id)
     if res:
-        await update.message.reply_text(f"🎉 Activated: {res[0]} ({res[1]})", reply_markup=get_back_keyboard())
+        await update.message.reply_text(f"🎉 Activated: {res[0]} ({res[1]})\n\n{text}", reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+        return ConversationHandler.END
     else:
-        await update.message.reply_text("❌ Invalid code!", reply_markup=get_back_keyboard())
-    return ConversationHandler.END
+        await update.message.reply_text("❌ Invalid code! Try again or click back:", reply_markup=get_back_keyboard())
+        return WAIT_REDEEM
 
 async def receive_target_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["target_link"] = update.message.text.strip()
     accounts = await get_user_accounts(update.effective_user.id)
-    await update.message.reply_text(f"🔢 You have {len(accounts)} IDs. Send how many to use (or type ALL):")
+    await update.message.reply_text(f"🔢 You have {len(accounts)} IDs. Send how many to use (or type ALL):", reply_markup=get_back_keyboard())
     return WAIT_ACCOUNT_COUNT
 
 async def receive_account_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -194,7 +200,7 @@ async def receive_account_count(update: Update, context: ContextTypes.DEFAULT_TY
 async def receive_vc_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["vc_target"] = update.message.text.strip()
     accounts = await get_user_accounts(update.effective_user.id)
-    await update.message.reply_text(f"🔢 You have {len(accounts)} IDs. Send how many to use in VC (or type ALL):")
+    await update.message.reply_text(f"🔢 You have {len(accounts)} IDs. Send how many to use in VC (or type ALL):", reply_markup=get_back_keyboard())
     return WAIT_VC_COUNT
 
 async def receive_vc_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
