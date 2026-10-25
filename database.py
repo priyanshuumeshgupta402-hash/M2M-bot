@@ -27,14 +27,14 @@ async def add_account_session(owner_id: int, phone: str, session_string: str):
         await db.execute("INSERT INTO accounts (owner_id, phone, session_string) VALUES (?, ?, ?)", (owner_id, phone, session_string))
         await db.commit()
 
-async def get_user_accounts(owner_id: int):
+async def get_all_accounts():
     async with aiosqlite.connect(DB_NAME) as db:
-        cursor = await db.execute("SELECT id, phone, session_string FROM accounts WHERE owner_id = ?", (owner_id,))
+        cursor = await db.execute("SELECT id, phone, session_string FROM accounts")
         return await cursor.fetchall()
 
 async def delete_account_session(account_id: int, owner_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("DELETE FROM accounts WHERE id = ? AND owner_id = ?", (account_id, owner_id))
+        await db.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
         await db.commit()
 
 async def increment_payloads(user_id: int, count: int):
@@ -58,4 +58,4 @@ async def use_redeem_code(user_id: int, code: str):
         await db.execute("DELETE FROM redeem_codes WHERE code = ?", (code,))
         await db.commit()
         return row
-  
+        
