@@ -6,7 +6,7 @@ from database import init_db, get_or_create_user, add_account_session, get_user_
 from engine import send_otp, verify_otp, verify_2fa, execute_channel_requests, execute_vc_action
 from keep_alive import keep_alive
 
-WAIT_PHONE, WAIT_OTP, WAIT_2FA, WAIT_REDEEM, WAIT_TARGET_LINK, WAIT_ACCOUNT_COUNT, WAIT_VC_TARGET = range(7)
+WAIT_PHONE, WAIT_OTP, WAIT_2FA, WAIT_REDEEM, WAIT_TARGET_LINK, WAIT_ACCOUNT_COUNT, WAIT_VC_TARGET, WAIT_VC_COUNT = range(8)
 
 def get_main_menu_keyboard():
     return InlineKeyboardMarkup([
@@ -91,7 +91,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"🔗 <b>REFERRAL</b>\n<code>{ref_link}</code>", reply_markup=get_back_keyboard(), parse_mode="HTML")
 
     elif data == "menu_add_account":
-        # Plan check removed so users can add accounts without purchase
         await query.edit_message_text("➕ Send phone number (e.g. <code>+919876543210</code>):", reply_markup=get_back_keyboard(), parse_mode="HTML")
         return WAIT_PHONE
 
@@ -193,10 +192,22 @@ async def receive_account_count(update: Update, context: ContextTypes.DEFAULT_TY
     return ConversationHandler.END
 
 async def receive_vc_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["vc_target"] = update.message.text.strip()
+    accounts = await get_user_accounts(update.effective_user.id)
+    await update.message.reply_text(f"🔢 You have {len(accounts)} IDs. Send how many to use in VC (or type ALL):")
+    return WAIT_VC_COUNT
+
+async def receive_vc_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    text = update.message.text.strip().upper()
     accounts = await get_user_accounts(user_id)
-    msg = await update.message.reply_text("🎙️ Connecting to VC...")
-    s, f = await execute_vc_action(user_id, accounts, update.message.text.strip(), context.user_data.get("vc_mode", "join_vc"), msg)
+    if text != "ALL":
+        try:
+            accounts = accounts[:max(1, int(text))]
+        except ValueError:
+            pass
+    msg = await update.message.reply_text("🎙️ Connecting to VC automatically...")
+    s, f = await execute_vc_action(user_id, accounts, context.user_data.get("vc_target"), context.user_data.get("vc_mode", "join_vc"), msg)
     await update.message.reply_text(f"✅ VC Done! Connected: {s} | Failed: {f}", reply_markup=get_back_keyboard())
     return ConversationHandler.END
 
@@ -213,6 +224,7 @@ def main():
             WAIT_TARGET_LINK: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_target_link), CallbackQueryHandler(button_handler)],
             WAIT_ACCOUNT_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_account_count), CallbackQueryHandler(button_handler)],
             WAIT_VC_TARGET: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_vc_target), CallbackQueryHandler(button_handler)],
+            WAIT_VC_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_vc_count), CallbackQueryHandler(button_handler)],
         },
         fallbacks=[CommandHandler("start", start_cmd), CallbackQueryHandler(button_handler)],
         per_message=False
