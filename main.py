@@ -75,7 +75,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "menu_setting":
         user = await get_or_create_user(user_id)
         if "Locked" in user['plan']:
-            await query.answer("❌ Your plan is Locked! Please redeem a code first.", show_alert=True)
+            await query.answer("❌ Purchase plan first!", show_alert=True)
             return ConversationHandler.END
         await query.edit_message_text("⚙️ <b>AUTOMATION SETTINGS</b>", reply_markup=get_settings_keyboard(), parse_mode="HTML")
 
@@ -91,10 +91,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"🔗 <b>REFERRAL</b>\n<code>{ref_link}</code>", reply_markup=get_back_keyboard(), parse_mode="HTML")
 
     elif data == "menu_add_account":
-        user = await get_or_create_user(user_id)
-        if "Locked" in user['plan']:
-            await query.answer("❌ Plan is Locked!", show_alert=True)
-            return ConversationHandler.END
+        # Plan check removed so users can add accounts without purchase
         await query.edit_message_text("➕ Send phone number (e.g. <code>+919876543210</code>):", reply_markup=get_back_keyboard(), parse_mode="HTML")
         return WAIT_PHONE
 
@@ -228,4 +225,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-  
+    
