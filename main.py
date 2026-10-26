@@ -8,11 +8,14 @@ from keep_alive import keep_alive
 
 WAIT_PHONE, WAIT_OTP, WAIT_2FA, WAIT_REDEEM, WAIT_TARGET_LINK, WAIT_ACCOUNT_COUNT, WAIT_VC_TARGET, WAIT_VC_COUNT = range(8)
 
+# Aapka diya hua permanent banner/logo image link
+BANNER_IMAGE_URL = "https://i.ibb.co/tTZmsWrQ/62270897-7b06-4f65-b0cf-958f37cf6ba9.png"
+
 def get_main_menu_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("👤 My Profile", callback_data="menu_profile"), InlineKeyboardButton("🎁 Redeem Code", callback_data="menu_redeem")],
-        [InlineKeyboardButton("➕ Add Account", callback_data="menu_add_account"), InlineKeyboardButton("⚙️ Automation Setting", callback_data="menu_setting")],
-        [InlineKeyboardButton("💎 Pricing Plans", callback_data="menu_plans"), InlineKeyboardButton("🔗 Refer & Earn", callback_data="menu_refer")]
+        [InlineKeyboardButton("🟢 Add Account", callback_data="menu_add_account"), InlineKeyboardButton("🔵 Automation Setting", callback_data="menu_setting")],
+        [InlineKeyboardButton("💎 VIP Plans", callback_data="menu_plans"), InlineKeyboardButton("🔗 Refer & Earn", callback_data="menu_refer")]
     ])
 
 def get_back_keyboard():
@@ -47,11 +50,16 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     referred_by = int(context.args[0].replace("ref_", "")) if context.args and context.args[0].startswith("ref_") else None
     text = await get_dashboard_text(user_id, referred_by)
+    
     if update.callback_query:
         await update.callback_query.answer()
-        await update.callback_query.edit_message_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+        try:
+            await update.callback_query.message.reply_photo(photo=BANNER_IMAGE_URL, caption=text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+            await update.callback_query.message.delete()
+        except Exception:
+            await update.callback_query.edit_message_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
     else:
-        await update.message.reply_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+        await update.message.reply_photo(photo=BANNER_IMAGE_URL, caption=text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
     return ConversationHandler.END
 
 async def gen_code_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -69,7 +77,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "back_main":
         text = await get_dashboard_text(user_id)
-        await query.edit_message_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+        try:
+            await query.message.reply_photo(photo=BANNER_IMAGE_URL, caption=text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+            await query.message.delete()
+        except Exception:
+            await query.edit_message_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
         return ConversationHandler.END
 
     elif data == "menu_profile":
@@ -84,17 +96,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👥 <b>Total Referrals:</b> {user['refers']} users\n"
             f"🪙 <b>Earned Points:</b> {user['points']} pts"
         )
-        await query.edit_message_text(profile_text, reply_markup=get_back_keyboard(), parse_mode="HTML")
+        await query.edit_message_caption(caption=profile_text, reply_markup=get_back_keyboard(), parse_mode="HTML")
 
     elif data == "menu_setting":
         user = await get_or_create_user(user_id)
         if "Locked" in user['plan']:
             await query.answer("❌ Access Denied! Please purchase or redeem a plan first.", show_alert=True)
             return ConversationHandler.END
-        await query.edit_message_text(
-            f"⚙️ <b>AUTOMATION CONTROL CENTER</b>\n"
-            f"──────────────────────────────\n"
-            f"Select your desired automation operation below:",
+        await query.edit_message_caption(
+            caption=f"⚙️ <b>AUTOMATION CONTROL CENTER</b>\n──────────────────────────────\nSelect your desired automation operation below:",
             reply_markup=get_settings_keyboard(), parse_mode="HTML"
         )
 
@@ -107,7 +117,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🥇 <b>1 Month Ultimate Pass:</b> ₹1299\n\n"
             f"📩 <i>To purchase a plan instantly, contact developer:</i> <b>{CREATOR_TAG}</b>"
         )
-        await query.edit_message_text(plans_text, reply_markup=get_back_keyboard(), parse_mode="HTML")
+        await query.edit_message_caption(caption=plans_text, reply_markup=get_back_keyboard(), parse_mode="HTML")
 
     elif data == "menu_refer":
         user = await get_or_create_user(user_id)
@@ -118,22 +128,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Share your unique referral link with friends and earn <b>+4 points</b> per join!\n\n"
             f"📌 <b>Your Personal Link:</b>\n<code>{ref_link}</code>"
         )
-        await query.edit_message_text(refer_text, reply_markup=get_back_keyboard(), parse_mode="HTML")
+        await query.edit_message_caption(caption=refer_text, reply_markup=get_back_keyboard(), parse_mode="HTML")
 
     elif data == "menu_add_account":
-        await query.edit_message_text(
-            f"➕ <b>ADD ACCOUNT TO POOL</b>\n"
-            f"──────────────────────────────\n"
-            f"Please send your Telegram phone number with country code (e.g., <code>+919876543210</code>):",
+        await query.edit_message_caption(
+            caption=f"➕ <b>ADD ACCOUNT TO POOL</b>\n──────────────────────────────\nPlease send your Telegram phone number with country code (e.g., <code>+919876543210</code>):",
             reply_markup=get_back_keyboard(), parse_mode="HTML"
         )
         return WAIT_PHONE
 
     elif data == "menu_redeem":
-        await query.edit_message_text(
-            f"🎁 <b>REDEEM YOUR VOUCHER CODE</b>\n"
-            f"──────────────────────────────\n"
-            f"Please send your active redeem code below:",
+        await query.edit_message_caption(
+            caption=f"🎁 <b>REDEEM YOUR VOUCHER CODE</b>\n──────────────────────────────\nPlease send your active redeem code below:",
             reply_markup=get_back_keyboard(), parse_mode="HTML"
         )
         return WAIT_REDEEM
@@ -148,10 +154,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not accounts:
             await query.answer("❌ No accounts available in the bot pool!", show_alert=True)
             return ConversationHandler.END
-        await query.edit_message_text(
-            f"📢 <b>CHANNEL JOIN AUTOMATION</b>\n"
-            f"──────────────────────────────\n"
-            f"Send target channel invite link or username (e.g., <code>@channelname</code> or invite link):",
+        await query.edit_message_caption(
+            caption=f"📢 <b>CHANNEL JOIN AUTOMATION</b>\n──────────────────────────────\nSend target channel invite link or username (e.g., <code>@channelname</code>):",
             reply_markup=get_back_keyboard(), parse_mode="HTML"
         )
         return WAIT_TARGET_LINK
@@ -162,10 +166,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("❌ No accounts available in the bot pool!", show_alert=True)
             return ConversationHandler.END
         context.user_data["vc_mode"] = "join_vc" if data == "op_join_vc" else "live_listen"
-        await query.edit_message_text(
-            f"🎙️ <b>VOICE CHAT / LIVE AUTOMATION</b>\n"
-            f"──────────────────────────────\n"
-            f"Send target VC group link or @username:",
+        await query.edit_message_caption(
+            caption=f"🎙️ <b>VOICE CHAT / LIVE AUTOMATION</b>\n──────────────────────────────\nSend target VC group link or @username:",
             reply_markup=get_back_keyboard(), parse_mode="HTML"
         )
         return WAIT_VC_TARGET
@@ -208,7 +210,7 @@ async def receive_redeem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     res = await use_redeem_code(update.effective_user.id, update.message.text.strip())
     text = await get_dashboard_text(update.effective_user.id)
     if res:
-        await update.message.reply_text(f"🎉 <b>CONGRATULATIONS!</b>\nPlan <b>{res[0]}</b> activated successfully!\n\n{text}", reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+        await update.message.reply_photo(photo=BANNER_IMAGE_URL, caption=f"🎉 <b>CONGRATULATIONS!</b>\nPlan <b>{res[0]}</b> activated successfully!\n\n{text}", reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
         return ConversationHandler.END
     else:
         await update.message.reply_text("❌ Invalid or expired redeem code! Try again or click back:", reply_markup=get_back_keyboard())
@@ -275,7 +277,7 @@ def main():
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("gen_code", gen_code_cmd))
     app.add_handler(conv)
-    print("🔥 M2M Control Bot is live with premium UI design!")
+    print("🔥 M2M Control Bot is live with banner UI and image link!")
     app.run_polling()
 
 if __name__ == "__main__":
