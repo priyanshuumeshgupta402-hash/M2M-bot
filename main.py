@@ -189,7 +189,7 @@ async def receive_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await send_otp(update.effective_user.id, update.message.text.strip())
         context.user_data["phone"] = update.message.text.strip()
-        await msg.edit_text("<b>📩 OTP sent successfully! Send the OTP with spaces (e.g., 1 2 3 4 5):</b>", parse_mode="HTML")
+        await msg.edit_text("<b>📩 OTP sent successfully! Send the OTP directly (e.g., 12345):</b>", parse_mode="HTML")
         return WAIT_OTP
     except Exception as e:
         await msg.edit_text(f"<b>❌ Error occurred: {e}</b>", reply_markup=get_back_keyboard(), parse_mode="HTML")
@@ -264,7 +264,6 @@ async def receive_vc_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("<b>🎙️ Connecting accounts to Voice Chat / Live stream...</b>", parse_mode="HTML")
     s, f = await execute_vc_action(user_id, accounts, context.user_data.get("vc_target"), context.user_data.get("vc_mode", "join_vc"), msg)
     
-    # Jab joining complete ho jayegi, tabhi yahan 'Leave VC' ka button show hoga (jaise aapne kaha tha)
     await update.message.reply_text(
         f"<b>✅ VC Connected Successfully!\n🟢 Active IDs in Live: {s} | Failed: {f}\n\n📌 Accounts are now live. Click the button below whenever you want to disconnect them!</b>", 
         reply_markup=get_active_vc_keyboard(), 
@@ -293,9 +292,9 @@ def main():
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("gen_code", gen_code_cmd))
     app.add_handler(conv)
-    print("🔥 M2M Control Bot is live with dynamic leave button!")
+    print("🔥 M2M Control Bot is live!")
     app.run_polling()
 
 if __name__ == "__main__":
     main()
-        
+            
