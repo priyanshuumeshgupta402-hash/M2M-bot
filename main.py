@@ -14,8 +14,7 @@ def get_main_menu_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("👤 My Profile", callback_data="menu_profile"), InlineKeyboardButton("🎁 Redeem Code", callback_data="menu_redeem")],
         [InlineKeyboardButton("🟢 Add Account", callback_data="menu_add_account"), InlineKeyboardButton("🔵 Automation Setting", callback_data="menu_setting")],
-        [InlineKeyboardButton("💎 VIP Plans", callback_data="menu_plans"), InlineKeyboardButton("🔗 Refer & Earn", callback_data="menu_refer")],
-        [InlineKeyboardButton("🛑 Leave VC / Disconnect All", callback_data="op_leave_vc")]
+        [InlineKeyboardButton("💎 VIP Plans", callback_data="menu_plans"), InlineKeyboardButton("🔗 Refer & Earn", callback_data="menu_refer")]
     ])
 
 def get_back_keyboard():
@@ -26,7 +25,12 @@ def get_settings_keyboard():
         [InlineKeyboardButton("📢 Send Channel Request", callback_data="op_channel_req")],
         [InlineKeyboardButton("🎙️ Join Voice Chat (VC)", callback_data="op_join_vc")],
         [InlineKeyboardButton("🔴 Live VC / Listen Mode", callback_data="op_live_vc")],
-        [InlineKeyboardButton("🛑 Leave VC / Disconnect All", callback_data="op_leave_vc")],
+        [InlineKeyboardButton("◀️ Back to Main Menu", callback_data="back_main")]
+    ])
+
+def get_active_vc_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🛑 Leave VC / Disconnect All Now", callback_data="op_leave_vc")],
         [InlineKeyboardButton("◀️ Back to Main Menu", callback_data="back_main")]
     ])
 
@@ -147,6 +151,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "op_leave_vc":
         count = await leave_vc_action(user_id)
         await query.answer(f"🛑 Success! Disconnected {count} accounts from VC/Live.", show_alert=True)
+        text = await get_dashboard_text(user_id)
+        try:
+            await query.message.reply_photo(photo=BANNER_IMAGE_URL, caption=f"<b>🛑 Successfully left VC/Live for {count} accounts!</b>\n\n{text}", reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+            await query.message.delete()
+        except Exception:
+            pass
         return ConversationHandler.END
 
     elif data == "op_channel_req":
@@ -253,7 +263,13 @@ async def receive_vc_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
     msg = await update.message.reply_text("<b>🎙️ Connecting accounts to Voice Chat / Live stream...</b>", parse_mode="HTML")
     s, f = await execute_vc_action(user_id, accounts, context.user_data.get("vc_target"), context.user_data.get("vc_mode", "join_vc"), msg)
-    await update.message.reply_text(f"<b>✅ VC Connected Successfully!\n🟢 Active IDs in Live: {s} | Failed: {f}\n\n📌 Accounts will stay connected until you click 'Leave VC / Disconnect All' in Menu or Settings.</b>", reply_markup=get_back_keyboard(), parse_mode="HTML")
+    
+    # Jab joining complete ho jayegi, tabhi yahan 'Leave VC' ka button show hoga (jaise aapne kaha tha)
+    await update.message.reply_text(
+        f"<b>✅ VC Connected Successfully!\n🟢 Active IDs in Live: {s} | Failed: {f}\n\n📌 Accounts are now live. Click the button below whenever you want to disconnect them!</b>", 
+        reply_markup=get_active_vc_keyboard(), 
+        parse_mode="HTML"
+    )
     return ConversationHandler.END
 
 def main():
@@ -277,9 +293,9 @@ def main():
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("gen_code", gen_code_cmd))
     app.add_handler(conv)
-    print("🔥 M2M Control Bot is live with persistent sessions and menu leave button!")
+    print("🔥 M2M Control Bot is live with dynamic leave button!")
     app.run_polling()
 
 if __name__ == "__main__":
     main()
-    
+        
