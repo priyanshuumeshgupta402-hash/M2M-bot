@@ -11,7 +11,7 @@ from config import API_ID, API_HASH
 from database import increment_payloads
 
 active_logins = {}
-active_vc_sessions = {} # User wise active connected clients store karne ke liye
+active_vc_sessions = {}
 
 async def send_otp(user_id: int, phone: str):
     client = TelegramClient(StringSession(), API_ID, API_HASH)
@@ -72,7 +72,7 @@ async def execute_channel_requests(user_id: int, accounts: list, target: str, st
         finally:
             await client.disconnect()
         try:
-            await status_message.edit_text(f"📊 Progress: {idx}/{total} | Success: {success} | Failed: {failed}")
+            await status_message.edit_text(f"<b>📊 Progress: {idx}/{total} | Success: {success} | Failed: {failed}</b>", parse_mode="HTML")
         except Exception:
             pass
         await asyncio.sleep(1)
@@ -117,7 +117,7 @@ async def execute_vc_action(user_id: int, accounts: list, target: str, mode: str
                 params = DataJSON(data=f'{{"ufrag":"m2m","pwd":"m2m","fingerprints":[],"ssrc":{random.randint(100000, 999999)}}}')
                 try:
                     await client(JoinGroupCallRequest(call=input_call, join_as=me, params=params, muted=True))
-                    # Client ko disconnect nahi karenge taaki yeh live/VC ke andar jude rahein!
+                    # Store active connected client so it stays connected in background
                     active_vc_sessions[user_id].append(client)
                     success += 1
                 except Exception:
@@ -134,7 +134,7 @@ async def execute_vc_action(user_id: int, accounts: list, target: str, mode: str
                 pass
                 
         try:
-            await status_message.edit_text(f"🎙️ VC Progress: {idx}/{total} | Connected: {success} | Failed: {failed}")
+            await status_message.edit_text(f"<b>🎙️ VC Progress: {idx}/{total} | Connected: {success} | Failed: {failed}</b>", parse_mode="HTML")
         except Exception:
             pass
         await asyncio.sleep(1)
